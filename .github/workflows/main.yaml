@@ -40,7 +40,6 @@ jobs:
     environment: lahoh-shitrit
     if: ${{ github.event.workflow_run.conclusion != 'failure' }}
     steps:
-     # Deploy Docker image with ServiceStack application using `docker compose up` remotely
       - name: remote docker-compose up via ssh
         uses: appleboy/ssh-action@v0.1.5
         env:
@@ -55,6 +54,6 @@ jobs:
           envs: APPTOKEN,USERNAME,TELEGRAM_TOKEN
           script: |
             echo $APPTOKEN | docker login ghcr.io -u $USERNAME --password-stdin
-            docker compose -f ~/.deploy/${{ github.event.repository.name }}-docker-compose.yml pull
-            docker compose -f ~/.deploy/${{ github.event.repository.name }}-docker-compose.yml up -d
+            docker compose -f $WORKDIR/docker-compose.yaml pull
+            docker compose -f $WORKDIR/docker-compose.yaml up -d
 
