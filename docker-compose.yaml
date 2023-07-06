@@ -1,0 +1,23 @@
+version: "1"
+
+services:
+  mongo:
+    container_name: mongo
+    image: mongo:latest
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - mongodb:/data/db
+  gigmaster:
+    container_name: gigmaster
+    command: python3 bot/bot.py
+    restart: always
+    build:
+      context: "."
+      dockerfile: Dockerfile
+    depends_on:
+      - mongo
+
+volumes:
+  mongodb:
