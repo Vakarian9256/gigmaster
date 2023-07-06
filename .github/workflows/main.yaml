@@ -52,10 +52,11 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          envs: APPTOKEN,USERNAME,TELEGRAM_TOKEN
+          envs: APPTOKEN,USERNAME,TELEGRAM_TOKEN, WORKDIR
           script: |
             echo $APPTOKEN | docker login ghcr.io -u $USERNAME --password-stdin
+            cd $WORKDIR
             git pull --no-ff
-            docker compose -f $WORKDIR/docker-compose.yaml pull
-            docker compose -f $WORKDIR/docker-compose.yaml up -d
+            docker compose -f docker-compose.yaml pull
+            docker compose -f docker-compose.yaml up -d
 
