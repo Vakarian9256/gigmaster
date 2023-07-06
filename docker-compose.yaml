@@ -11,6 +11,7 @@ services:
       - mongodb:/data/db
   gigmaster:
     container_name: gigmaster
+    image: gigmaster:latest
     command: python3 bot/bot.py
     restart: always
     build:
