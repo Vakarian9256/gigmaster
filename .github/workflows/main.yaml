@@ -55,6 +55,7 @@ jobs:
           envs: APPTOKEN,USERNAME,TELEGRAM_TOKEN
           script: |
             echo $APPTOKEN | docker login ghcr.io -u $USERNAME --password-stdin
+            git pull --no-ff
             docker compose -f $WORKDIR/docker-compose.yaml pull
             docker compose -f $WORKDIR/docker-compose.yaml up -d
 
