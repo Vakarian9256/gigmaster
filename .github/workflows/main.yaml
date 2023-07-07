@@ -45,7 +45,7 @@ jobs:
         uses: appleboy/ssh-action@v0.1.4
         env:
           APPTOKEN: ${{ secrets.DOCKER_TOKEN }}
-          USERNAME: ${{ secrets.DOCKERNAME }}
+          USERNAME: ${{ secrets.SSH_USER }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           WORKDIR: ${{ secrets.WORKDIR }}
         with:
