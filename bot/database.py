@@ -108,7 +108,7 @@ class Database():
         artists = self.artists_collection.find_one({"_id": artists_id})["artists"]
         if artist in artists:
             artists.remove(artist)
-            logger.warning("Removing %s from user id %s list of artists", artist, user_id))
+            logger.warning("Removing %s from user id %s list of artists", artist, user_id)
             self.artists_collection.update_one(
                     {"_id": artists_id},
                     {"$set": {"artists": artists}}
