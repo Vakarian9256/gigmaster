@@ -11,7 +11,7 @@ services:
       - mongodb:/data/db
   gigmaster:
     container_name: gigmaster
-    image: ghcr.io/ronsh909/gigmaster:${SHA:-latest}
+    image: ronsh909/gigmaster:latest
     environment:
       - TELEGRAM_TOKEN
     command: python3 bot/bot.py
