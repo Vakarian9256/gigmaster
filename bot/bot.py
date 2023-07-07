@@ -214,7 +214,7 @@ def run_bot():
             entry_points=[CommandHandler("add", add_artist_handle, filters=user_filter),
                           CommandHandler("remove", remove_artist_handle, filters=user_filter),
                           CommandHandler("search", search_shows_handle, filters=user_filter)],
-            fallbacks=[CommandHandler("cancel", cancel)],
+            fallbacks=[],
             states={
                 ADD: [MessageHandler(filters.TEXT, add_artist)],
                 REMOVE: [MessageHandler(filters.TEXT, remove_artist)],
