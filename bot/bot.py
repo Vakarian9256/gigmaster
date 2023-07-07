@@ -1,10 +1,11 @@
 import logging
-import asyncio
 import datetime
 from telegram import Update, User, BotCommand
-from telegram.ext import Application, ApplicationBuilder, JobQueue, CallbackContext, CommandHandler, AIORateLimiter, filters
+from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler,\
+        CallbackContext, CommandHandler, filters, ConversationHandler, MessageHandler
 from telegram.constants import ParseMode
 from typing import Dict
+from enum import Enum, auto
 
 import config
 from database import Database
@@ -19,17 +20,23 @@ logging.getLogger('httpx').setLevel(logging.WARNING)
 
 HELP_MESSAGE = """
 פקודות:
-⚪ \\add name - הוסף זמר לרשימה
-⚪ \\remove name - הסר זמר מהרשימה 
-⚪ \\search name - חפש הופעות לזמר
-⚪ \\list - הצג את רשימת החיפוש
-⚪ \\help - הצג הודעה זו 
+⚪ /add - הוסף זמר לרשימה
+⚪ /remove - הסר זמר מהרשימה 
+⚪ /search - חפש הופעות לזמר
+⚪ /list - הצג את רשימת החיפוש
+⚪ /help - הצג הודעה זו 
 
 ⚪ מומלץ לרשום את השם שמופיע בתמונה של ההופעה באתר של קופת תל-אביב, כיוון שלחלק מהזמרים שומרים את השם באנגלית *שיעול* נועה קירל *שיעול* 
 """
 
 db = Database()
 
+
+#class Enum):
+#    ADD = auto()
+#    REMOVE = auto()
+#    SEARCH = auto()
+ADD, REMOVE, SEARCH = range(3)
 
 async def register_user_if_not_exists(update: Update, user: User):
     if not db.check_if_user_exists(user.id):
@@ -52,44 +59,79 @@ async def help_handle(update: Update, context: CallbackContext):
 async def add_artist_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, update.message.from_user)
 
+    await update.message.reply_text("איזה זמר/ת תרצה להוסיף?")
+    return ADD
+    #if not context.args or len(context.args) == 0:
+    #    await update.message.reply_text("לא שלחת שם של זמר! נסה שנית.", parse_mode=ParseMode.HTML)
+    #else:
+    #    artist_name = " ".join(context.args)
+    #    db.add_artist(user_id, artist_name)
+    #    await update.message.reply_text(f"""{artist_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
+
+
+async def add_artist(update: Update, context: CallbackContext):
+    artist_name = update.message.text
     user_id = update.message.from_user.id
-    if not context.args or len(context.args) == 0:
-        await update.message.reply_text("לא שלחת שם של זמר! נסה שנית.", parse_mode=ParseMode.HTML)
-    else:
-        artist_name = " ".join(context.args)
-        db.add_artist(user_id, artist_name)
-        await update.message.reply_text(f"""{artist_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
+    db.add_artist(user_id, artist_name)
+    await update.message.reply_text(f"""{artist_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
+    return ConversationHandler.END
 
 
 async def remove_artist_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, update.message.from_user)
 
+    await update.message.reply_text("איזה זמר/ת תרצה להסיר?")
+    return REMOVE
+    #user_id = update.message.from_user.id
+    #if not context.args or len(context.args) == 0:
+    #    await update.message.reply_text("לא שלחת שם של זמר! נסה שנית.", parse_mode=ParseMode.HTML)
+    #else:
+    #    artist_name = " ".join(context.args)
+    #    db.remove_artist(user_id, artist_name)
+    #    await update.message.reply_text(f"{artist_name} הוסר מרשימת החיפוש!", parse_mode=ParseMode.HTML)
+
+
+async def remove_artist(update: Update, context: CallbackContext):
+    artist_name = update.message.text
     user_id = update.message.from_user.id
-    if not context.args or len(context.args) == 0:
-        await update.message.reply_text("לא שלחת שם של זמר! נסה שנית.", parse_mode=ParseMode.HTML)
-    else:
-        artist_name = " ".join(context.args)
-        db.remove_artist(user_id, artist_name)
-        await update.message.reply_text(f"{artist_name} הוסר מרשימת החיפוש!", parse_mode=ParseMode.HTML)
+    db.remove_artist(user_id, artist_name)
+    await update.message.reply_text(f"{artist_name} הוסר מרשימת החיפוש!", parse_mode=ParseMode.HTML)
+    return ConversationHandler.END
 
 
 async def search_shows_handle(update: Update, context: CallbackContext):
     await register_user_if_not_exists(update, update.message.from_user)
 
-    user_id = update.message.from_user.id
-    if not context.args or len(context.args) == 0:
-        await update.message.reply_text("לא שלחת שם של זמר! נסה שנית.", parse_mode=ParseMode.HTML)
+    await update.message.reply_text("הופעות של איזה זמר/ת תרצה לחפש?")
+    return SEARCH
+    #user_id = update.message.from_user.id
+    #if not context.args or len(context.args) == 0:
+    #    await update.message.reply_text("לא שלחת שם של זמר! נסה שנית.", parse_mode=ParseMode.HTML)
+    #else:
+    #    artist_name = " ".join(context.args)
+    #    logger.warning(f"Searching shows of {artist_name} for user {user_id}")
+    #    concerts = kupat_queries.get_concerts_for_artist_name(artist_name)
+    #    if not concerts:
+    #        await update.message.reply_text(f"""לא נמצאו הופעות של {artist_name}""", parse_mode=ParseMode.HTML)
+    #    else:
+    #        text = f"נמצאו {len(concerts)} הופעות של {artist_name}:"
+    #        for concert in concerts:
+    #            text += "\n" + format_concert(concert)
+    #        await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+
+
+async def search_shows(update: Update, context: CallbackContext):
+    artist_name = update.message.text
+    logger.warning(f"Searching shows of {artist_name} for user {update.message.from_user.id}")
+    concerts = kupat_queries.get_concerts_for_artist_name(artist_name)
+    if not concerts:
+        await update.message.reply_text(f"""לא נמצאו הופעות של {artist_name}""", parse_mode=ParseMode.HTML)
     else:
-        artist_name = " ".join(context.args)
-        logger.warning(f"Searching shows of {artist_name} for user {user_id}")
-        concerts = kupat_queries.get_concerts_for_artist_name(artist_name)
-        if not concerts:
-            await update.message.reply_text(f"""לא נמצאו הופעות של {artist_name}""", parse_mode=ParseMode.HTML)
-        else:
-            text = f"נמצאו {len(concerts)} הופעות של {artist_name}:"
-            for concert in concerts:
-                text += "\n" + format_concert(concert)
-            await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+        text = f"נמצאו {len(concerts)} הופעות של {artist_name}:"
+        for concert in concerts:
+            text += "\n" + format_concert(concert)
+        await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+    return ConversationHandler.END
 
 
 async def list_artists_handle(update: Update, context: CallbackContext):
@@ -113,7 +155,7 @@ async def search_for_shows(context: CallbackContext):
             if concerts:
                 text = f"נמצאו {len(concerts)} הופעות של {artist}:" + "\n".join(format_concert(concert) for concert in concerts)
                 await context.bot.send_message(chat_id=user["chat_id"], text=text)
-                db.add_concerts(user["_id"], concerts)
+                #db.add_concerts(user["_id"], concerts)
 
 
 def format_concert(concert: Dict) -> str:
@@ -167,13 +209,21 @@ def run_bot():
         usernames = [u for u in config.allowed_telegram_usernames if isinstance(u, str)]
         user_filter = filters.User(username=usernames)
     app.add_handler(CommandHandler("help", help_handle, filters=user_filter))
-    app.add_handler(CommandHandler("add", add_artist_handle, filters=user_filter))
-    app.add_handler(CommandHandler("remove", remove_artist_handle, filters=user_filter))
-    app.add_handler(CommandHandler("search", search_shows_handle, filters=user_filter))
     app.add_handler(CommandHandler("list", list_artists_handle, filters=user_filter))
+    conv_handler = ConversationHandler(
+            entry_points=[CommandHandler("add", add_artist_handle, filters=user_filter),
+                          CommandHandler("remove", remove_artist_handle, filters=user_filter),
+                          CommandHandler("search", search_shows_handle, filters=user_filter)],
+            fallbacks=[CommandHandler("cancel", cancel)],
+            states={
+                ADD: [MessageHandler(filters.TEXT, add_artist)],
+                REMOVE: [MessageHandler(filters.TEXT, remove_artist)],
+                SEARCH: [MessageHandler(filters.TEXT, search_shows)]
+            }
+        )
+    app.add_handler(conv_handler)
     logger.info("Starting app")
     app.run_polling()
-
 
 if __name__ == "__main__":
     run_bot()
