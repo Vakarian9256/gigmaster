@@ -40,7 +40,7 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion != 'failure' }}
     steps:
       - name: remote docker-compose up via ssh
-        uses: appleboy/ssh-action@v0.1.5
+        uses: appleboy/ssh-action@v0.1.4
         env:
           APPTOKEN: ${{ secrets.DOCKER_TOKEN }}
           USERNAME: ${{ secrets.DOCKERNAME }}
