@@ -28,7 +28,9 @@ jobs:
         with:
           push: true
           platforms: linux/amd64
-          tags: ronsh909/gigmaster:${{ github.sha }}
+          tags: |
+            ronsh909/gigmaster:${{ github.sha }}
+            ronsh909/gigmaster:latest
   
   deploy:
     needs: build
