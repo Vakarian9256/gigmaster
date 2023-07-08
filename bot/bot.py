@@ -18,9 +18,7 @@ from database import Database
 import kupat_queries
 
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -69,9 +67,7 @@ async def add_artist(update: Update, context: CallbackContext):
     artist_name = update.message.text
     user_id = update.message.from_user.id
     db.add_artist(user_id, artist_name)
-    await update.message.reply_text(
-        f"""{artist_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML
-    )
+    await update.message.reply_text(f"""{artist_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
     return ConversationHandler.END
 
 
@@ -85,9 +81,7 @@ async def remove_artist(update: Update, context: CallbackContext):
     artist_name = update.message.text
     user_id = update.message.from_user.id
     db.remove_artist(user_id, artist_name)
-    await update.message.reply_text(
-        f"{artist_name} הוסר מרשימת החיפוש!", parse_mode=ParseMode.HTML
-    )
+    await update.message.reply_text(f"{artist_name} הוסר מרשימת החיפוש!", parse_mode=ParseMode.HTML)
     return ConversationHandler.END
 
 
@@ -99,9 +93,7 @@ async def search_shows_handle(update: Update, context: CallbackContext):
 
 async def search_shows(update: Update, context: CallbackContext):
     artist_name = update.message.text
-    logger.warning(
-        f"Searching shows of {artist_name} for user {update.message.from_user.id}"
-    )
+    logger.warning(f"Searching shows of {artist_name} for user {update.message.from_user.id}")
     await update.message.chat.send_action(action="typing")
     text = ""
     concerts = kupat_queries.get_concerts_for_artist_name(artist_name)
@@ -132,11 +124,7 @@ async def search_for_shows(context: CallbackContext):
         artists = db.fetch_artists(user["_id"])
         for artist in artists:
             concerts = kupat_queries.get_concerts_for_artist_name(artist)
-            concerts = [
-                concert
-                for concert in concerts
-                if not db.shown_concert(user["_id"], concert["id"])
-            ]
+            concerts = [concert for concert in concerts if not db.shown_concert(user["_id"], concert["id"])]
             if concerts:
                 text = f"נמצאו {len(concerts)} הופעות של {artist}:" + "\n".join(
                     format_concert(concert) for concert in concerts
@@ -147,20 +135,18 @@ async def search_for_shows(context: CallbackContext):
 
 def format_concert(concert: Dict) -> str:
     def format_datetime(date_str: str, from_format: str, to_format: str) -> str:
-        return datetime.datetime.strftime(
-            datetime.datetime.strptime(date_str, from_format), to_format
-        )
+        return datetime.datetime.strftime(datetime.datetime.strptime(date_str, from_format), to_format)
 
     location = concert["venueName"]
     # Dates format get switched around with Hebrew for some reason so switching format
     date = format_datetime(concert["dateTime"], "%Y-%m-%d %H:%M", "%H:%M %Y-%m-%d")
-    sale_date = format_datetime(
-        concert["ticketSaleStart"], "%Y-%m-%d %H:%M:%S", "%H:%M:%S %Y-%m-%d"
-    )
+    sale_date = format_datetime(concert["ticketSaleStart"], "%Y-%m-%d %H:%M:%S", "%H:%M:%S %Y-%m-%d")
+    url = f"https://tickets.kupat.co.il/booking/features/{concert['featureId']}?prsntId={concert['id']}#tickets"
     return f"""
     מיקום: {location}
     תאריך: {date}
     פתיחת מכירת כרטיסים: {sale_date}
+    קישור: {url}
     """
 
 
@@ -176,9 +162,7 @@ async def post_init(app: Application):
         ]
     )
     # datetime.time is in UTC
-    app.job_queue.run_daily(
-        search_for_shows, time=datetime.time(hour=10, minute=0, second=00)
-    )
+    app.job_queue.run_daily(search_for_shows, time=datetime.time(hour=10, minute=0, second=00))
 
 
 def run_bot():
