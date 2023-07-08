@@ -12,6 +12,8 @@ services:
   gigmaster:
     container_name: gigmaster
     image: ronsh909/gigmaster:latest
+    environment:
+      - TELEGRAM_TOKEN
     command: python3 bot/bot.py
     restart: always
     build:
