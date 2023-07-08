@@ -53,11 +53,11 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          envs: APPTOKEN,USERNAME,TELEGRAM_TOKEN,WORKDIR
+          envs: APPTOKEN,USERNAME,WORKDIR
           script: |
             echo $APPTOKEN | docker login  -u $USERNAME --password-stdin
             echo $WORKDIR
             cd $WORKDIR
-            git pull --no-ff
+            git pull --ff-only
             docker compose pull
-            TELEGRAM_TOKEN=$TELEGRAM_TOKEN docker compose up -d
+            docker compose up -d
