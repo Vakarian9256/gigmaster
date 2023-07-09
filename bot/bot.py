@@ -15,6 +15,7 @@ from telegram.constants import ParseMode
 from typing import Dict
 from enum import Enum, auto
 import re
+from requests.exceptions import RequestException
 
 import config
 from database import Database
@@ -104,7 +105,12 @@ async def search_shows(update: Update, context: CallbackContext):
     logger.warning(f"Searching shows of {singer_name} for user {update.message.from_user.id}")
     await update.effective_chat.send_action(action="typing")
     text = ""
-    concerts = api_queries.get_concerts_for_singer(singer_name)
+    try:
+        concerts = api_queries.get_concerts_for_singer(singer_name)
+    except RequestException:
+        logger.exception("Failed to connect to %s", api_queries.KUPAT_API_URL)
+        await update.message.reply_text("לא הצלחתי להתחבר לאתר, אנא נסו שנית עוד מספר שניות.")
+        return States.ACTION_BUTTON_CLICK
     if not concerts:
         text = f"""לא נמצאו הופעות של {singer_name}"""
     else:
@@ -132,7 +138,11 @@ async def search_shows_for_users(context: CallbackContext):
         logger.warning(f"Looking for shows for user {user['_id']}")
         singers = db.fetch_singers(user["_id"])
         for singer in singers:
-            concerts = api_queries.get_concerts_for_singer(singer)
+            try:
+                concerts = api_queries.get_concerts_for_singer(singer)
+            except RequestException:
+                logger.exception("Failed to reach %s for user %s", api_queries.KUPAT_API_URL, user["_id"])
+                continue
             concerts = [concert for concert in concerts if not db.shown_concert(user["_id"], concert["id"])]
             if concerts:
                 text = f"נמצאו {len(concerts)} הופעות של {singer}:" + "\n".join(
@@ -149,8 +159,8 @@ def format_datetime(date_str: str, from_format: str, to_format: str) -> str:
 def format_concert(concert: Dict) -> str:
     location = concert["venueName"]
     # Dates format get switched around with Hebrew for some reason so switching format
-    date = format_datetime(concert["dateTime"], "%Y-%m-%d %H:%M", "%H:%M %Y-%m-%d")
-    sale_date = format_datetime(concert["ticketSaleStart"], "%Y-%m-%d %H:%M:%S", "%H:%M:%S %Y-%m-%d")
+    date = format_datetime(concert["dateTime"], "%Y-%m-%d %H:%M", "%H:%M %d-%m-%Y")
+    sale_date = format_datetime(concert["ticketSaleStart"], "%Y-%m-%d %H:%M:%S", "%H:%M:%S %d-%m-%Y")
     url = f"https://tickets.kupat.co.il/booking/features/{concert['featureId']}?prsntId={concert['id']}#tickets"
     return f"""
     מיקום: {location}
@@ -200,7 +210,17 @@ async def search_standups(update: Update, context: CallbackContext):
     logger.warning(f"Searching standups of {comedian_name} for user {update.message.from_user.id}")
     await update.message.chat.send_action(action="typing")
     text = ""
-    standups = api_queries.get_standups_for_comedian(comedian_name)
+    try:
+        standups = api_queries.get_standups_for_comedian(comedian_name)
+    except RequestException:
+        logger.exception(
+            "Failed to reach either %s or %s for user %s",
+            api_queries.CASTILIA_API_URL,
+            api_queries.COMEDYBAR_API_URL,
+            update.message.from_user.id,
+        )
+        await update.message.reply_text("לא הצלחתי להתחבר לאתר, אנא נסו שנית בעוד מספר שניות.")
+        return States.ACTION_BUTTON_CLICK
     if not standups[api_queries.StandupSites.COMEDYBAR] and not standups[api_queries.StandupSites.CASTILIA]:
         text = f"לא נמצאו הופעות של {comedian_name}" ""
     else:
@@ -225,7 +245,7 @@ def format_standup(standup: Dict, site: api_queries.StandupSites) -> str:
     }
     location = standup["event_place"]
     # Dates format get switched around with Hebrew for some reason so switching format
-    date = format_datetime(standup["show_date"] + " " + standup["show_time"], "%Y-%m-%d %H:%M", "%H:%M %Y-%m-%d")
+    date = format_datetime(standup["show_date"] + " " + standup["show_time"], "%Y-%m-%d %H:%M", "%H:%M %d-%m-%Y")
     url = base_urls[site] + str(standup["id"])
     return f"""
     מיקום: {location}
@@ -239,7 +259,16 @@ async def search_standups_for_users(context: CallbackContext):
         logger.warning(f"Looking for standups for user {user['_id']}")
         comedian = db.fetch_comedians(user["_id"])
         for comedian in comedian:
-            standups = api_queries.get_standups_for_comedian(comedian)
+            try:
+                standups = api_queries.get_standups_for_comedian(comedian)
+                continue
+            except RequestException:
+                logger.exception(
+                    "Failed to reach %s or %s for user %s",
+                    api_queries.CASTILIA_API_URL,
+                    api_queries.COMEDYBAR_API_URL,
+                    user["_id"],
+                )
             deduped = {}
             for site in standups:
                 if not standups[site]:
@@ -353,8 +382,12 @@ async def post_init(app: Application):
         ]
     )
     # datetime.time is in UTC
-    app.job_queue.run_daily(search_shows_for_users, time=datetime.time(hour=config.singers_search_hour, minute=0, second=00))
-    app.job_queue.run_monthly(search_standups_for_users, day=1, when=datetime.time(hour=config.standup_search_hour, minute=0, second=00))
+    app.job_queue.run_daily(
+        search_shows_for_users, time=datetime.time(hour=config.singers_search_hour, minute=0, second=00)
+    )
+    app.job_queue.run_monthly(
+        search_standups_for_users, day=1, when=datetime.time(hour=config.standup_search_hour, minute=0, second=00)
+    )
 
 
 def run_bot():
