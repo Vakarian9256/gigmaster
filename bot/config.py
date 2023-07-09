@@ -1,8 +1,5 @@
 import os
-from dotenv import load_dotenv, find_dotenv
 
-
-load_dotenv(find_dotenv())
 
 telegram_token = os.getenv("TELEGRAM_TOKEN")
 allowed_telegram_usernames = []  # if empty, the bot is available to anyone.
