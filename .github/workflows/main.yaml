@@ -20,8 +20,9 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_NAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v2
@@ -29,8 +30,7 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ronsh909/gigmaster:${{ github.sha }}
-            ronsh909/gigmaster:latest
+            ghcr.io/ronsh909/gigmaster:${{ github.sha }}
   
   deploy:
     needs: build
@@ -44,7 +44,7 @@ jobs:
       - name: remote docker-compose up via ssh
         uses: appleboy/ssh-action@v0.1.4
         env:
-          APPTOKEN: ${{ secrets.DOCKER_TOKEN }}
+          APPTOKEN: ${{ secrets.GITHUB_TOKEN }}
           USERNAME: ${{ secrets.SSH_USER }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           WORKDIR: ${{ secrets.WORKDIR }}
@@ -53,11 +53,11 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          envs: APPTOKEN,USERNAME,TELEGRAM_TOKEN,WORKDIR
+          envs: APPTOKEN,USERNAME,WORKDIR
           script: |
             echo $APPTOKEN | docker login  -u $USERNAME --password-stdin
             echo $WORKDIR
             cd $WORKDIR
             git pull --no-ff
             docker compose pull
-            TELEGRAM_TOKEN=$TELEGRAM_TOKEN docker compose up -d
+            docker compose up -d

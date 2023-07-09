@@ -11,9 +11,7 @@ services:
       - mongodb:/data/db
   gigmaster:
     container_name: gigmaster
-    image: ronsh909/gigmaster:latest
-    environment:
-      - TELEGRAM_TOKEN
+    image: ghcr.io/ronsh909/gigmaster:latest
     command: python3 bot/bot.py
     restart: always
     build:
