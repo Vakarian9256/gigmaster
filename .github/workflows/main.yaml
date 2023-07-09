@@ -61,4 +61,4 @@ jobs:
             cd $WORKDIR
             git pull --ff-only
             docker compose pull
-            docker compose up -d
+            docker compose --env-file .env up -d
