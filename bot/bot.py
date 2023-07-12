@@ -247,7 +247,7 @@ async def search_standups(update: Update, context: CallbackContext):
                         continue
                     actual_standups.append(standup["show_date"])
                     text += "\n" + format_standup(standup, site)
-            text = f"נמצאו {len(actual_standups)} הופעות סטדנאפ של {comedian_name}:" + text
+            text = f"נמצאו {len(actual_standups)} הופעות סטנדאפ של {comedian_name}:" + text
         await update.message.reply_text(text, parse_mode=ParseMode.HTML)
     return States.ACTION_BUTTON_CLICK
 
