@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class Database:
+    NAMES_SIZE_LIMIT = 20
+
     def __init__(self):
         self.client = pymongo.MongoClient(config.mongodb_uri)
         self.db = self.client["gigmaster"]
@@ -93,7 +95,6 @@ class Database:
         self.user_collection.update_one({"_id": user_id}, {"$set": {"shown_standups_id": standups_id}})
         return standups_id
 
-
     def fetch_singers(self, user_id: int) -> List[str]:
         self.check_if_user_exists(user_id, raise_exception=True)
         singers_id = self.user_collection.find_one({"_id": user_id})["singers_id"]
@@ -106,6 +107,8 @@ class Database:
         self.check_if_user_exists(user_id, raise_exception=True)
         singers_id = self.user_collection.find_one({"_id": user_id})["singers_id"]
         singers = self.singers_collection.find_one({"_id": singers_id})["singers"]
+        if len(singers) == self.NAMES_SIZE_LIMIT:
+            raise RuntimeError(f"Cannot add more comedians! User {user_id}  has reached the size limit {self.NAMES_SIZE_LIMIT}")
         if singer not in singers:
             singers.append(singer)
             logger.warning("Adding %s to user id %s list of singers", singer, user_id)
@@ -148,6 +151,8 @@ class Database:
         self.check_if_user_exists(user_id, raise_exception=True)
         comedians_id = self.user_collection.find_one({"_id": user_id})["comedians_id"]
         comedians = self.comedians_collection.find_one({"_id": comedians_id})["comedians"]
+        if len(comedians) == self.NAMES_SIZE_LIMIT:
+            raise RuntimeError(f"Cannot add more comedians! User {user_id}  has reached the size limit {self.NAMES_SIZE_LIMIT}")
         if comedian not in comedians:
             comedians.append(comedian)
             logger.warning("Adding %s to user id %s list of comedians", comedian, user_id)

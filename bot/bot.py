@@ -80,8 +80,12 @@ async def help_handle(update: Update, context: CallbackContext):
 async def add_singer(update: Update, context: CallbackContext):
     singer_name = update.message.text
     user_id = update.message.from_user.id
-    db.add_singer(user_id, singer_name)
-    await update.message.reply_text(f"""{singer_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
+    try:
+        db.add_singer(user_id, singer_name)
+    except RuntimeError:
+        await update.message.reply_text(f"הגעת לכמות המקסימלית של זמרים ברשימת החיפוש. על מנת להוסיף זמרים חדשים עליך להסיר זמרים מהרשימה.")
+    else:
+        await update.message.reply_text(f"""{singer_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
     return States.ACTION_BUTTON_CLICK
 
 
@@ -192,8 +196,12 @@ async def list_comedian_handle(update: Update, context: CallbackContext) -> int:
 async def add_comedian(update: Update, context: CallbackContext):
     comedian_name = update.message.text
     user_id = update.message.from_user.id
-    db.add_comedian(user_id, comedian_name)
-    await update.message.reply_text(f"""{comedian_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
+    try:
+        db.add_comedian(user_id, comedian_name)
+    except RuntimeError:
+        await update.message.reply_text(f"הגעת לכמות המקסימלית של סטנדאפיסטים ברשימת החיפוש. על מנת להוסיף חדשים עליך להסיר סטנדאפיסטים מהרשימה.")
+    else:
+        await update.message.reply_text(f"""{comedian_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
     return States.ACTION_BUTTON_CLICK
 
 
