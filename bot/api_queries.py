@@ -43,7 +43,7 @@ def get_concerts_for_singer(singer: str) -> List[Dict]:
     concerts = get_concerts()
     concerts_of_singer = []
     for concert in concerts:
-        if singer == concert["featureName"]:
+        if singer.lower() == concert["featureName"].lower():
             concerts_of_singer.append(concert)
     return concerts_of_singer
 
@@ -78,7 +78,7 @@ def get_comedybar_standups() -> List[Dict]:
 def get_comedybar_standups_for_comedian(comedian: str) -> Dict:
     shows = get_comedybar_standups()
     for show in shows:
-        if comedian in show["title"]:
+        if comedian.lower() in show["title"].lower():
             return show
     return {}
 
@@ -92,7 +92,7 @@ def get_castilia_standups() -> List[Dict]:
 def get_castilia_standups_for_comedian(comedian: str) -> Dict:
     shows = get_castilia_standups()
     for show in shows:
-        if comedian == show["title"]:
+        if comedian.lower() == show["title"].lower():
             return show
     return {}
 
