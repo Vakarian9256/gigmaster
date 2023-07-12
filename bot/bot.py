@@ -12,7 +12,7 @@ from telegram.ext import (
     CallbackQueryHandler,
 )
 from telegram.constants import ParseMode
-from typing import Dict
+from typing import Dict, Generator
 from enum import Enum, auto
 import re
 from requests.exceptions import RequestException
@@ -77,47 +77,64 @@ async def help_handle(update: Update, context: CallbackContext):
     await update.message.reply_text(HELP_MESSAGE, parse_mode=ParseMode.HTML)
 
 
+def parse_names(text: str) -> Generator[None, None, str]:
+    for name in text.split(','):
+        if name:
+            yield name.strip()
+
+
 async def add_singer(update: Update, context: CallbackContext):
-    singer_name = update.message.text
     user_id = update.message.from_user.id
-    db.add_singer(user_id, singer_name)
-    await update.message.reply_text(f"""{singer_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
+    for singer_name in parse_names(update.message.text):
+        try:
+            db.add_singer(user_id, singer_name)
+        except RuntimeError:
+            await update.message.reply_text(f"הגעת לכמות המקסימלית של זמרים ברשימת החיפוש. על מנת להוסיף זמרים חדשים עליך להסיר זמרים מהרשימה.")
+        else:
+            await update.message.reply_text(f"""{singer_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
     return States.ACTION_BUTTON_CLICK
 
 
 async def remove_singer(update: Update, context: CallbackContext):
-    singer_name = update.message.text
     user_id = update.message.from_user.id
-    db.remove_singer(user_id, singer_name)
-    await update.message.reply_text(f"{singer_name} הוסר מרשימת החיפוש!", parse_mode=ParseMode.HTML)
+    for singer_name in parse_names(update.message.text):
+        db.remove_singer(user_id, singer_name)
+        await update.message.reply_text(f"{singer_name} הוסר מרשימת החיפוש!", parse_mode=ParseMode.HTML)
     return States.ACTION_BUTTON_CLICK
 
 
-async def get_singer_from_user(update: Update, context: CallbackContext):
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id, text="הקלידו את שם הזמר בבקשה:", reply_markup=ForceReply()
-    )
-    return States(int(update.callback_query.data))
-
+async def get_names_from_user(update: Update, context: CallbackContext):
+    state = States(int(update.callback_query.data))
+    if state in (States.ADD_SINGER, States.REMOVE_SINGER, States.SEARCH_SINGER):
+        await context.bot.send_message(
+                chat_id=update.effective_chat.id, text="הקלידו את שמות הזמרים, מופרדים על ידי פסיקים:",
+                reply_markup=ForceReply()
+        )
+    else:
+        await context.bot.send_message(
+                chat_id=update.effective_chat.id, text="הקלידו את שמות הסטנדאפיסטים, מופרדים על ידי פסיקים:",
+                reply_markup=ForceReply()
+                )
+    return state
 
 async def search_shows(update: Update, context: CallbackContext):
-    singer_name = update.message.text
-    logger.warning(f"Searching shows of {singer_name} for user {update.message.from_user.id}")
-    await update.effective_chat.send_action(action="typing")
-    text = ""
-    try:
-        concerts = api_queries.get_concerts_for_singer(singer_name)
-    except RequestException:
-        logger.exception("Failed to connect to %s", api_queries.KUPAT_API_URL)
-        await update.message.reply_text("לא הצלחתי להתחבר לאתר, אנא נסו שנית עוד מספר שניות.")
-        return States.ACTION_BUTTON_CLICK
-    if not concerts:
-        text = f"""לא נמצאו הופעות של {singer_name}"""
-    else:
-        text = f"נמצאו {len(concerts)} הופעות של {singer_name}:"
-        for concert in concerts:
-            text += "\n" + format_concert(concert)
-    await update.message.reply_text(text)
+    for singer_name in parse_names(update.message.text):
+        logger.warning(f"Searching shows of {singer_name} for user {update.message.from_user.id}")
+        await update.effective_chat.send_action(action="typing")
+        text = ""
+        try:
+            concerts = api_queries.get_concerts_for_singer(singer_name)
+        except RequestException:
+            logger.exception("Failed to connect to %s", api_queries.KUPAT_API_URL)
+            await update.message.reply_text("לא הצלחתי להתחבר לאתר, אנא נסו שנית עוד מספר שניות.")
+            return States.ACTION_BUTTON_CLICK
+        if not concerts:
+            text = f"""לא נמצאו הופעות של {singer_name}"""
+        else:
+            text = f"נמצאו {len(concerts)} הופעות של {singer_name}:"
+            for concert in concerts:
+                text += "\n" + format_concert(concert)
+        await update.message.reply_text(text)
     return States.ACTION_BUTTON_CLICK
 
 
@@ -170,13 +187,6 @@ def format_concert(concert: Dict) -> str:
     """
 
 
-async def get_comedian_from_user(update: Update, context: CallbackContext):
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id, text="הקלידו את שם הסטנדאפיסט בבקשה:", reply_markup=ForceReply()
-    )
-    return States(int(update.callback_query.data))
-
-
 async def list_comedian_handle(update: Update, context: CallbackContext) -> int:
     user_id = update.callback_query.from_user.id
     comedians_list = db.fetch_comedians(user_id)
@@ -190,51 +200,55 @@ async def list_comedian_handle(update: Update, context: CallbackContext) -> int:
 
 
 async def add_comedian(update: Update, context: CallbackContext):
-    comedian_name = update.message.text
     user_id = update.message.from_user.id
-    db.add_comedian(user_id, comedian_name)
-    await update.message.reply_text(f"""{comedian_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
+    for comedian_name in parse_names(update.message.text):
+        try:
+            db.add_comedian(user_id, comedian_name)
+        except RuntimeError:
+            await update.message.reply_text(f"הגעת לכמות המקסימלית של סטנדאפיסטים ברשימת החיפוש. על מנת להוסיף חדשים עליך להסיר סטנדאפיסטים מהרשימה.")
+        else:
+            await update.message.reply_text(f"""{comedian_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
     return States.ACTION_BUTTON_CLICK
 
 
 async def remove_comedian(update: Update, context: CallbackContext):
-    comedian_name = update.message.text
     user_id = update.message.from_user.id
-    db.remove_comedian(user_id, comedian_name)
-    await update.message.reply_text(f"{comedian_name} הוסר מרשימת החיפוש!", parse_mode=ParseMode.HTML)
+    for comedian_name in parse_names(update.message.text):
+        db.remove_comedian(user_id, comedian_name)
+        await update.message.reply_text(f"{comedian_name} הוסר מרשימת החיפוש!", parse_mode=ParseMode.HTML)
     return States.ACTION_BUTTON_CLICK
 
 
 async def search_standups(update: Update, context: CallbackContext):
-    comedian_name = update.message.text
-    logger.warning(f"Searching standups of {comedian_name} for user {update.message.from_user.id}")
-    await update.message.chat.send_action(action="typing")
-    text = ""
-    try:
-        standups = api_queries.get_standups_for_comedian(comedian_name)
-    except RequestException:
-        logger.exception(
-            "Failed to reach either %s or %s for user %s",
-            api_queries.CASTILIA_API_URL,
-            api_queries.COMEDYBAR_API_URL,
-            update.message.from_user.id,
-        )
-        await update.message.reply_text("לא הצלחתי להתחבר לאתר, אנא נסו שנית בעוד מספר שניות.")
-        return States.ACTION_BUTTON_CLICK
-    if not standups[api_queries.StandupSites.COMEDYBAR] and not standups[api_queries.StandupSites.CASTILIA]:
-        text = f"לא נמצאו הופעות של {comedian_name}" ""
-    else:
-        actual_standups = []
-        for site in standups:
-            if not standups[site]:
-                continue
-            for standup in standups[site]["events"]:
-                if standup["show_date"] in actual_standups:
+    for comedian_name in parse_names(update.message.text):
+        logger.warning(f"Searching standups of {comedian_name} for user {update.message.from_user.id}")
+        await update.message.chat.send_action(action="typing")
+        text = ""
+        try:
+            standups = api_queries.get_standups_for_comedian(comedian_name)
+        except RequestException:
+            logger.exception(
+                "Failed to reach either %s or %s for user %s",
+                api_queries.CASTILIA_API_URL,
+                api_queries.COMEDYBAR_API_URL,
+                update.message.from_user.id,
+            )
+            await update.message.reply_text("לא הצלחתי להתחבר לאתר, אנא נסו שנית בעוד מספר שניות.")
+            return States.ACTION_BUTTON_CLICK
+        if not standups[api_queries.StandupSites.COMEDYBAR] and not standups[api_queries.StandupSites.CASTILIA]:
+            text = f"לא נמצאו הופעות של {comedian_name}" ""
+        else:
+            actual_standups = []
+            for site in standups:
+                if not standups[site]:
                     continue
-                actual_standups.append(standup["show_date"])
-                text += "\n" + format_standup(standup, site)
-        text = f"נמצאו {len(actual_standups)} הופעות סטדנאפ של {comedian_name}:" + text
-    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+                for standup in standups[site]["events"]:
+                    if standup["show_date"] in actual_standups:
+                        continue
+                    actual_standups.append(standup["show_date"])
+                    text += "\n" + format_standup(standup, site)
+            text = f"נמצאו {len(actual_standups)} הופעות סטנדאפ של {comedian_name}:" + text
+        await update.message.reply_text(text, parse_mode=ParseMode.HTML)
     return States.ACTION_BUTTON_CLICK
 
 
@@ -405,10 +419,8 @@ def run_bot():
         usernames = [u for u in config.allowed_telegram_usernames if isinstance(u, str)]
         user_filter = filters.User(username=usernames)
     app.add_handler(CommandHandler("help", help_handle, filters=user_filter))
-    SINGER_NAME_REQUIRED_REGEX = re.compile(
-        f"{str(States.ADD_SINGER.value)}|{str(States.SEARCH_SINGER.value)}|{str(States.REMOVE_SINGER.value)}"
-    )
-    COMEDIAN_NAME_REQUIRED_REGEX = re.compile(
+    NAMES_REQUIRED_REGEX = re.compile(
+        f"{str(States.ADD_SINGER.value)}|{str(States.SEARCH_SINGER.value)}|{str(States.REMOVE_SINGER.value)}|" +
         f"{str(States.ADD_COMEDIAN.value)}|{str(States.SEARCH_COMEDIAN.value)}|{str(States.REMOVE_COMEDIAN.value)}"
     )
     conv_handler = ConversationHandler(
@@ -424,9 +436,8 @@ def run_bot():
                 CallbackQueryHandler(standup_menu_2nd_level, pattern=str(States.STANDUPS.value)),
             ],
             States.ACTION_BUTTON_CLICK: [
-                CallbackQueryHandler(get_singer_from_user, pattern=SINGER_NAME_REQUIRED_REGEX),
+                CallbackQueryHandler(get_names_from_user, pattern=NAMES_REQUIRED_REGEX),
                 CallbackQueryHandler(list_singers_handle, pattern=str(States.LIST_SINGER.value)),
-                CallbackQueryHandler(get_comedian_from_user, pattern=COMEDIAN_NAME_REQUIRED_REGEX),
                 CallbackQueryHandler(list_comedian_handle, pattern=str(States.LIST_COMEDIAN.value)),
                 CallbackQueryHandler(start_over, pattern=str(States.SHOW_TYPE_CLICK.value)),
             ],
