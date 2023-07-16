@@ -55,7 +55,7 @@ jobs:
           port: 22
           envs: APPTOKEN,USERNAME,TEST_WORKDIR
           script: |
-            echo $APPTOKEN | docker login  -u $USERNAME --password-stdin
+            echo $APPTOKEN | docker login ghcr.io -u $USERNAME --password-stdin
             cd $TEST_WORKDIR
             git pull --ff-only
             docker compose pull
