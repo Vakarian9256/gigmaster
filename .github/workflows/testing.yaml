@@ -47,7 +47,7 @@ jobs:
         env:
           APPTOKEN: ${{ secrets.GITHUB_TOKEN }}
           USERNAME: ${{ secrets.SSH_USER }}
-          WORKDIR: ${{ secrets.TEST_WORKDIR }}
+          TEST_WORKDIR: ${{ secrets.TEST_WORKDIR }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
