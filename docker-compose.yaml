@@ -2,7 +2,7 @@ version: "3"
 
 services:
   mongo:
-    container_name: mongo${TESTING}
+    container_name: mongo
     image: mongo:latest
     restart: always
     ports:
@@ -10,7 +10,7 @@ services:
     volumes:
       - mongodb:/data/db
   gigmaster:
-    container_name: gigmaster${TESTING}
+    container_name: gigmaster
     image: ghcr.io/ronsh909/gigmaster:latest
     env_file: .env
     command: python3 bot/bot.py
