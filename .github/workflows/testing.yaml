@@ -58,5 +58,5 @@ jobs:
             echo $APPTOKEN | docker login ghcr.io -u $USERNAME --password-stdin
             cd $TEST_WORKDIR
             git pull --ff-only
-            docker compose pull
-            docker compose up -d
+            docker compose -f ./testing-docker-comopse.yaml pull
+            docker compose -f ./testing-docker-comopse.yaml up -d

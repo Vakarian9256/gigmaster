@@ -29,5 +29,5 @@ jobs:
             echo $APPTOKEN | docker login ghcr.io -u $USERNAME --password-stdin
             cd $WORKDIR
             git pull --ff-only
-            docker compose pull
-            docker compose up -d
+            docker compose -f ./docker-compose.yaml pull
+            docker compose ./docker-compose.yaml up -d
