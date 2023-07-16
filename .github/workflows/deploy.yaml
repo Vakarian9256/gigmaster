@@ -30,4 +30,4 @@ jobs:
             cd $WORKDIR
             git pull --ff-only
             docker compose -f ./docker-compose.yaml pull
-            docker compose ./docker-compose.yaml up -d
+            docker compose -f ./docker-compose.yaml up -d

@@ -48,15 +48,17 @@ jobs:
           APPTOKEN: ${{ secrets.GITHUB_TOKEN }}
           USERNAME: ${{ secrets.SSH_USER }}
           TEST_WORKDIR: ${{ secrets.TEST_WORKDIR }}
+          SHA: ${{ github.sha }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          envs: APPTOKEN,USERNAME,TEST_WORKDIR
+          envs: APPTOKEN,USERNAME,TEST_WORKDIR,SHA
           script: |
             echo $APPTOKEN | docker login ghcr.io -u $USERNAME --password-stdin
             cd $TEST_WORKDIR
             git pull --ff-only
-            docker compose -f ./testing-docker-comopse.yaml pull
-            docker compose -f ./testing-docker-comopse.yaml up -d
+            git checkout $SHA 
+            docker compose -f ./testing-docker-compose.yaml pull
+            docker compose -f ./testing-docker-compose.yaml up -d
