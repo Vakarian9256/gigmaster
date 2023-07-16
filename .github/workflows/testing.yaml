@@ -1,4 +1,4 @@
-name: main
+name: build & test
 on:
   push:
     tags: 
@@ -33,7 +33,7 @@ jobs:
             ghcr.io/ronsh909/gigmaster:${{ github.sha }}
             ghcr.io/ronsh909/gigmaster:latest
   
-  deploy:
+  deploy_test:
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -47,18 +47,16 @@ jobs:
         env:
           APPTOKEN: ${{ secrets.GITHUB_TOKEN }}
           USERNAME: ${{ secrets.SSH_USER }}
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          WORKDIR: ${{ secrets.WORKDIR }}
+          WORKDIR: ${{ secrets.TEST_WORKDIR }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          envs: APPTOKEN,USERNAME,WORKDIR
+          envs: APPTOKEN,USERNAME,TEST_WORKDIR
           script: |
             echo $APPTOKEN | docker login  -u $USERNAME --password-stdin
-            echo $WORKDIR
-            cd $WORKDIR
+            cd $TEST_WORKDIR
             git pull --ff-only
             docker compose pull
             docker compose up -d

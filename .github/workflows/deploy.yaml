@@ -1,0 +1,33 @@
+name: deploy
+on:
+  release:
+    types: [published]
+
+  workflow_dispatch:
+  
+jobs:
+  deploy_test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    environment: lahoh-shitrit
+    steps:
+      - name: remote docker-compose up via ssh
+        uses: appleboy/ssh-action@v0.1.4
+        env:
+          APPTOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USERNAME: ${{ secrets.SSH_USER }}
+          WORKDIR: ${{ secrets.WORKDIR }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          envs: APPTOKEN,USERNAME,WORKDIR
+          script: |
+            echo $APPTOKEN | docker login  -u $USERNAME --password-stdin
+            cd $WORKDIR
+            git pull --ff-only
+            docker compose pull
+            docker compose up -d
