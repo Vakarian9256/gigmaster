@@ -51,7 +51,7 @@ class Database:
             "singers_id": None,
             "shown_concerts_id": None,
             "comedians_id": None,
-            "shown_standups_id": None
+            "shown_standups_id": None,
         }
         if not self.check_if_user_exists(user_id):
             logger.info(f"Registering new user {user_dict}")
@@ -108,7 +108,9 @@ class Database:
         singers_id = self.user_collection.find_one({"_id": user_id})["singers_id"]
         singers = self.singers_collection.find_one({"_id": singers_id})["singers"]
         if len(singers) == self.NAMES_SIZE_LIMIT:
-            raise RuntimeError(f"Cannot add more comedians! User {user_id}  has reached the size limit {self.NAMES_SIZE_LIMIT}")
+            raise RuntimeError(
+                f"Cannot add more comedians! User {user_id}  has reached the size limit {self.NAMES_SIZE_LIMIT}"
+            )
         if singer not in singers:
             singers.append(singer)
             logger.warning("Adding %s to user id %s list of singers", singer, user_id)
@@ -123,19 +125,20 @@ class Database:
             logger.warning("Removing %s from user id %s list of singers", singer, user_id)
             self.singers_collection.update_one({"_id": singers_id}, {"$set": {"singers": singers}})
 
-    def add_concerts(self, user_id: int, concerts: List[Dict]):
+    def add_concerts(self, user_id: int, singer: str, concerts: List[Dict]):
         self.check_if_user_exists(user_id, raise_exception=True)
         concerts_id = self.user_collection.find_one({"_id": user_id})["shown_concerts_id"]
         shown_concerts = self.shown_concerts_collection.find_one({"_id": concerts_id})["shown_concerts"]
         for concert in concerts:
-            id = concert["id"]
-            if id not in shown_concerts:
-                shown_concerts.append(id)
+            concert_id = singer + concert["date"]
+            if concert_id not in shown_concerts:
+                shown_concerts.append(concert_id)
         self.shown_concerts_collection.update_one({"_id": concerts_id}, {"$set": {"shown_concerts": shown_concerts}})
 
-    def shown_concert(self, user_id: int, concert_id: int) -> bool:
+    def shown_concert(self, user_id: int, singer: str, concert_date: str) -> bool:
         self.check_if_user_exists(user_id, raise_exception=True)
         concerts_id = self.user_collection.find_one({"_id": user_id})["shown_concerts_id"]
+        concert_id = singer + concert_date
         concerts = self.shown_concerts_collection.find_one({"_id": concerts_id})
         return concerts["shown_concerts"] and concert_id in concerts["shown_concerts"]
 
@@ -152,7 +155,9 @@ class Database:
         comedians_id = self.user_collection.find_one({"_id": user_id})["comedians_id"]
         comedians = self.comedians_collection.find_one({"_id": comedians_id})["comedians"]
         if len(comedians) == self.NAMES_SIZE_LIMIT:
-            raise RuntimeError(f"Cannot add more comedians! User {user_id}  has reached the size limit {self.NAMES_SIZE_LIMIT}")
+            raise RuntimeError(
+                f"Cannot add more comedians! User {user_id}  has reached the size limit {self.NAMES_SIZE_LIMIT}"
+            )
         if comedian not in comedians:
             comedians.append(comedian)
             logger.warning("Adding %s to user id %s list of comedians", comedian, user_id)
@@ -173,7 +178,7 @@ class Database:
         shown_standups = self.shown_standups_collection.find_one({"_id": standups_id})["shown_standups"]
         for standup in standups:
             standup_date = standup["show_date"]
-            id = comedian_name+standup_date
+            id = comedian_name + standup_date
             if id not in shown_standups:
                 shown_standups.append(id)
         self.shown_standups_collection.update_one({"_id": standups_id}, {"$set": {"shown_standups": shown_standups}})
