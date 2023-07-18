@@ -30,8 +30,13 @@ def get_eventim_shows(url, standup: bool = False) -> List[Dict]:
     events = []
     session = requests.Session()
     headers = {
-        "User-Agent": "Mozilla/5.0 (X11; CrOS x86_64 12871.102.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.141 Safari/537.36"
-    }
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 OPR/99.0.0.0",
+            "accept-encoding": "gzip, deflate, br", "accept-language": "en-US,en;q=0.9",
+            "sec-fetch-site": "cross-site", "sec-fetch-mode": "cors",
+            "sec-fetch-dest": "empty", "sec-ch-ua-platform": "Windows", "sec-cha-ua-mobile": "?0",
+            "sec-cha-ua": '"Opera GX";v="99", "Chromium";v="113", "Not-A.Brand";v="24"',
+            "origin": "https://www.eventim.co.il", "referer": "https://www.eventim.co.il"
+            }
     while True:
         resp = session.get(url, verify=False, headers=headers)
         events.extend(show for show in resp.json()["productGroups"] if filter(show))
@@ -84,9 +89,12 @@ def get_leaan_concerts() -> List[Dict]:
     return concerts
 
 
-def get_eventim_concerts() -> List[Dict]:
+def get_eventim_concerts(search_term=None) -> List[Dict]:
     concerts = []
-    for event in get_eventim_shows(EVENTIM_API_LIVE_SHOWS_URL):
+    url = EVENTIM_API_LIVE_SHOWS_URL
+    if search_term:
+        url += f"&search_term={search_term.replace(' ', '%20')}"
+    for event in get_eventim_shows(url):
         for show in event["products"]:
             venue = show["typeAttributes"]["liveEntertainment"]["location"]["name"]
             if show["typeAttributes"]["liveEntertainment"]["location"].get("city"):
@@ -107,13 +115,13 @@ def get_eventim_concerts() -> List[Dict]:
     return concerts
 
 
-def get_concerts() -> List[Dict]:
-    return get_kupat_concerts() + get_leaan_concerts() + get_eventim_concerts()
+def get_concerts(eventim_search_term=None) -> List[Dict]:
+    return get_kupat_concerts() + get_leaan_concerts() + get_eventim_concerts(search_term=eventim_search_term)
 
 
 def get_concerts_for_singer(singer: str) -> List[Dict]:
     concerts = {}
-    for concert in get_concerts():
+    for concert in get_concerts(eventim_search_term=singer):
         if singer.lower() in concert["title"].lower():
             id = concert["date"]
             if id in concerts:
@@ -179,9 +187,12 @@ def get_castilia_standups() -> List[Dict]:
     return standups
 
 
-def get_eventim_standups() -> List[Dict]:
+def get_eventim_standups(search_term=None) -> List[Dict]:
     standups = []
-    for event in get_eventim_shows(EVENTIM_API_STANDUP_URL, standup=True):
+    url = EVENTIM_API_LIVE_SHOWS_URL
+    if search_term:
+        url += f"&search_term={search_term.replace(' ', '%20')}"
+    for event in get_eventim_shows(url, standup=True):
         for show in event["products"]:
             venue = show["typeAttributes"]["liveEntertainment"]["location"]["name"]
             if show["typeAttributes"]["liveEntertainment"]["location"].get("city"):
@@ -200,13 +211,14 @@ def get_eventim_standups() -> List[Dict]:
     return standups
 
 
-def get_standups() -> List[Dict]:
-    return get_castilia_standups() + get_comedybar_standups() + get_eventim_standups() + get_leaan_standups()
+def get_standups(eventim_search_term=None) -> List[Dict]:
+    return get_castilia_standups() + get_comedybar_standups() +\
+            get_eventim_standups(search_term=eventim_search_term) + get_leaan_standups()
 
 
 def get_standups_for_comedian(comedian: str) -> List[Dict]:
     standups = {}
-    for standup in get_standups():
+    for standup in get_standups(eventim_search_term=comedian):
         if comedian in standup["title"]:
             id = standup["date"]
             if id in standups:
