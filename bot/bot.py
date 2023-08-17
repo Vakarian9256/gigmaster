@@ -388,8 +388,10 @@ async def post_init(app: Application):
         ]
     )
     # interval in seconds
+    starting_singers_time = datetime.datetime.now().time()
+    starting_singers_time.replace(microsecond=0, second=0, minute=0, hour=(starting_singers_time.hour + 1) % 24)
     app.job_queue.run_repeating(
-        search_shows_for_users, interval=config.singers_search_interval, first=10
+        search_shows_for_users, interval=config.singers_search_interval, first=starting_singers_time
     )
     # datetime.time is in UTC
     app.job_queue.run_monthly(
