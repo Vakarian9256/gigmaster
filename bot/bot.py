@@ -96,7 +96,7 @@ async def add_singer(update: Update, context: CallbackContext) -> States:
                 "הגעת לכמות המקסימלית של זמרים ברשימת החיפוש. על מנת להוסיף זמרים חדשים עליך להסיר זמרים מהרשימה."
             )
         else:
-            await update.message.reply_text(f"""{singer_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
+            await update.message.reply_text(f"{singer_name} התווסף לרשימת החיפוש!", parse_mode=ParseMode.HTML)
     return States.ACTION_BUTTON_CLICK
 
 
@@ -189,14 +189,14 @@ def format_concert(concert: Dict) -> str:
     # Dates format get switched around with Hebrew for some reason so switching format
     urls = "\n".join(url.replace(" ", "%20") for url in concert["url"])
     if concert["ticketSaleStart"]:
-        sale_start = f"""\nפתיחת מכירת כרטיסים: {concert["ticketSaleStart"]}"""
+        sale_start = f"\nפתיחת מכירת כרטיסים: {concert["ticketSaleStart"]}"
     else:
         sale_start = ""
     if concert["ticketSaleStop"]:
-        sale_stop = f"""\nסגירת מכירת כרטיסים: {concert["ticketSaleStop"]}"""
+        sale_stop = f"\nסגירת מכירת כרטיסים: {concert["ticketSaleStop"]}"
     else:
         sale_stop = ""
-    text = f"""מיקום: {concert["venue"]}\nתאריך: {concert["date"]}{sale_start}{sale_stop}\nקישורים:\n{urls}"""
+    text = f"מיקום: {concert["venue"]}\nתאריך: {concert["date"]}{sale_start}{sale_stop}\nקישורים:\n{urls}"
     return text
 
 
@@ -219,7 +219,7 @@ async def add_comedian(update: Update, context: CallbackContext) -> States:
             db.add_comedian(user_id, comedian_name)
         except RuntimeError:
             await update.message.reply_text(
-                f"הגעת לכמות המקסימלית של סטנדאפיסטים ברשימת החיפוש. על מנת להוסיף חדשים עליך להסיר סטנדאפיסטים מהרשימה."
+                "הגעת לכמות המקסימלית של סטנדאפיסטים ברשימת החיפוש. על מנת להוסיף חדשים עליך להסיר סטנדאפיסטים מהרשימה."
             )
         else:
             await update.message.reply_text(f"""{comedian_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
@@ -388,10 +388,11 @@ async def post_init(app: Application):
             BotCommand("/standup", "הצג תפריט סטנדאפ"),
         ]
     )
-    # datetime.time is in UTC
-    app.job_queue.run_daily(
-        search_shows_for_users, time=datetime.time(hour=config.singers_search_hour, minute=0, second=00)
+    # interval in seconds
+    app.job_queue.run_repeating(
+        search_shows_for_users, interval=config.singers_search_interval, first=10
     )
+    # datetime.time is in UTC
     app.job_queue.run_monthly(
         search_standups_for_users, day=1, when=datetime.time(hour=config.standup_search_hour, minute=0, second=00)
     )
