@@ -188,14 +188,14 @@ def format_concert(concert: Dict) -> str:
     # Dates format get switched around with Hebrew for some reason so switching format
     urls = "\n".join(url.replace(" ", "%20") for url in concert["url"])
     if concert["ticketSaleStart"]:
-        sale_start = f"\nפתיחת מכירת כרטיסים: {concert["ticketSaleStart"]}"
+        sale_start = f"""\nפתיחת מכירת כרטיסים: {concert["ticketSaleStart"]}"""
     else:
         sale_start = ""
     if concert["ticketSaleStop"]:
-        sale_stop = f"\nסגירת מכירת כרטיסים: {concert["ticketSaleStop"]}"
+        sale_stop = f"""\nסגירת מכירת כרטיסים: {concert["ticketSaleStop"]}"""
     else:
         sale_stop = ""
-    text = f"מיקום: {concert["venue"]}\nתאריך: {concert["date"]}{sale_start}{sale_stop}\nקישורים:\n{urls}"
+    text = f""""מיקום: {concert["venue"]}\nתאריך: {concert["date"]}{sale_start}{sale_stop}\nקישורים:\n{urls}"""
     return text
 
 
