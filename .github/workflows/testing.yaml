@@ -30,8 +30,8 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ghcr.io/ronsh909/gigmaster:${{ github.sha }}
-            ghcr.io/ronsh909/gigmaster:latest
+            ghcr.io/vakarian9256/gigmaster:${{ github.sha }}
+            ghcr.io/vakarian9256/gigmaster:latest
   
   deploy_test:
     needs: build
