@@ -1,6 +1,5 @@
 import requests
 from typing import Dict, List
-from enum import Enum, auto
 import datetime
 
 
@@ -30,13 +29,18 @@ def get_eventim_shows(url, standup: bool = False) -> List[Dict]:
     events = []
     session = requests.Session()
     headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 OPR/99.0.0.0",
-            "accept-encoding": "gzip, deflate, br", "accept-language": "en-US,en;q=0.9",
-            "sec-fetch-site": "cross-site", "sec-fetch-mode": "cors",
-            "sec-fetch-dest": "empty", "sec-ch-ua-platform": "Windows", "sec-cha-ua-mobile": "?0",
-            "sec-cha-ua": '"Opera GX";v="99", "Chromium";v="113", "Not-A.Brand";v="24"',
-            "origin": "https://www.eventim.co.il", "referer": "https://www.eventim.co.il"
-            }
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 OPR/99.0.0.0",
+        "accept-encoding": "gzip, deflate, br",
+        "accept-language": "en-US,en;q=0.9",
+        "sec-fetch-site": "cross-site",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-dest": "empty",
+        "sec-ch-ua-platform": "Windows",
+        "sec-cha-ua-mobile": "?0",
+        "sec-cha-ua": '"Opera GX";v="99", "Chromium";v="113", "Not-A.Brand";v="24"',
+        "origin": "https://www.eventim.co.il",
+        "referer": "https://www.eventim.co.il",
+    }
     while True:
         resp = session.get(url, verify=False, headers=headers)
         events.extend(show for show in resp.json()["productGroups"] if filter(show))
@@ -212,8 +216,12 @@ def get_eventim_standups(search_term=None) -> List[Dict]:
 
 
 def get_standups(eventim_search_term=None) -> List[Dict]:
-    return get_castilia_standups() + get_comedybar_standups() +\
-            get_eventim_standups(search_term=eventim_search_term) + get_leaan_standups()
+    return (
+        get_castilia_standups()
+        + get_comedybar_standups()
+        + get_eventim_standups(search_term=eventim_search_term)
+        + get_leaan_standups()
+    )
 
 
 def get_standups_for_comedian(comedian: str) -> List[Dict]:
