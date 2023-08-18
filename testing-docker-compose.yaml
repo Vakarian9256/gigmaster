@@ -9,7 +9,7 @@ services:
       - mongodb:/data/db
   gigmaster:
     container_name: gigmaster-testing
-    image: ghcr.io/ronsh909/gigmaster:latest
+    image: ghcr.io/vakarian9256/gigmaster:latest
     env_file: .env
     command: python3 bot/bot.py
     restart: always

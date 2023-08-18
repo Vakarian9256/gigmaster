@@ -46,14 +46,13 @@ MAX_MESSAGE_LENGTH = 4096
 
 
 HELP_MESSAGE = """
-פקודות:
 ⚪ /start - הצג את התפריט הראשי.
 ⚪ /singer - הצג את תפריט ההופעות.
 ⚪ /standup - הצג את תפריט הסטנדאפ.
 ⚪ /help - הצג הודעה זו 
 
 ⚪ מומלץ לרשום את השם שמופיע בתמונה של ההופעה באתר של קופת תל-אביב, כיוון שלחלק מהזמרים שומרים את השם באנגלית *שיעול* נועה קירל *שיעול* 
-⚪ מדי יום, ב-13:00, הבוט יחפש הופעות לזמרים ברשימת החיפוש ויודיע אם מצא.
+⚪ הבוט יחפש הופעות לזמרים ברשימת החיפוש כל שעה ויודיע אם מצא.
 ⚪ בראשון בחודש, הבוט יחפש הופעות סטנדאפ לסטנדאפיסטים שברשימת החיפוש ויודיע אם מצא.
 """
 
@@ -96,7 +95,7 @@ async def add_singer(update: Update, context: CallbackContext) -> States:
                 "הגעת לכמות המקסימלית של זמרים ברשימת החיפוש. על מנת להוסיף זמרים חדשים עליך להסיר זמרים מהרשימה."
             )
         else:
-            await update.message.reply_text(f"""{singer_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
+            await update.message.reply_text(f"{singer_name} התווסף לרשימת החיפוש!", parse_mode=ParseMode.HTML)
     return States.ACTION_BUTTON_CLICK
 
 
@@ -219,7 +218,7 @@ async def add_comedian(update: Update, context: CallbackContext) -> States:
             db.add_comedian(user_id, comedian_name)
         except RuntimeError:
             await update.message.reply_text(
-                f"הגעת לכמות המקסימלית של סטנדאפיסטים ברשימת החיפוש. על מנת להוסיף חדשים עליך להסיר סטנדאפיסטים מהרשימה."
+                "הגעת לכמות המקסימלית של סטנדאפיסטים ברשימת החיפוש. על מנת להוסיף חדשים עליך להסיר סטנדאפיסטים מהרשימה."
             )
         else:
             await update.message.reply_text(f"""{comedian_name} התווסף לרשימת החיפוש!""", parse_mode=ParseMode.HTML)
@@ -388,10 +387,15 @@ async def post_init(app: Application):
             BotCommand("/standup", "הצג תפריט סטנדאפ"),
         ]
     )
-    # datetime.time is in UTC
-    app.job_queue.run_daily(
-        search_shows_for_users, time=datetime.time(hour=config.singers_search_hour, minute=0, second=00)
+    # interval in seconds
+    starting_singers_time = datetime.datetime.now().time()
+    starting_singers_time = starting_singers_time.replace(
+        microsecond=0, second=0, minute=0, hour=(starting_singers_time.hour + 1) % 24
     )
+    app.job_queue.run_repeating(
+        search_shows_for_users, interval=config.singers_search_interval, first=starting_singers_time
+    )
+    # datetime.time is in UTC
     app.job_queue.run_monthly(
         search_standups_for_users, day=1, when=datetime.time(hour=config.standup_search_hour, minute=0, second=00)
     )
