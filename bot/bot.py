@@ -195,7 +195,7 @@ def format_concert(concert: Dict) -> str:
         sale_stop = f"""\nסגירת מכירת כרטיסים: {concert["ticketSaleStop"]}"""
     else:
         sale_stop = ""
-    text = f""""מיקום: {concert["venue"]}\nתאריך: {concert["date"]}{sale_start}{sale_stop}\nקישורים:\n{urls}"""
+    text = f"""מיקום: {concert["venue"]}\nתאריך: {concert["date"]}{sale_start}{sale_stop}\nקישורים:\n{urls}"""
     return text
 
 
