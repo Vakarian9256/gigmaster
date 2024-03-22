@@ -43,10 +43,10 @@ def get_eventim_shows(url, standup: bool = False) -> List[Dict]:
     }
     while True:
         resp = session.get(url, verify=False, headers=headers)
-        events.extend(show for show in resp.json()["productGroups"] if filter(show))
         try:
+            events.extend(show for show in resp.json()["productGroups"] if filter(show))
             url = resp.json()["_links"]["next"]["href"].replace("/search/", "/websearch/search/")
-        except KeyError:
+        except (KeyError, requests.exceptions.RequestException):
             break
     return events
 
@@ -86,7 +86,7 @@ def get_leaan_concerts() -> List[Dict]:
                 "date": format_datetime(show["FormattedDate"], "%d/%m/%Y %H:%M", "%H:%M %d/%m/%Y"),
                 "venue": show["HallName"],
                 "ticketSaleStart": show["StartSaleFrom"],
-                "ticketSaleStop": format_datetime(show["EndSaleAt"], "%Y-%m-%dT%H:%M:%S", "%H:%M:%S %d/%m/%Y"),
+                "ticketSaleStop": format_datetime(show["EndSaleAt"] or show["ActualEventDate"], "%Y-%m-%dT%H:%M:%S", "%H:%M:%S %d/%m/%Y"),
                 "url": show["DirectLink"],
             }
             concerts.append(concert)
