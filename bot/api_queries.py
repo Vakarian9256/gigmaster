@@ -180,7 +180,7 @@ def get_ticketmaster_concerts() -> list[dict[str, str]]:
                     if concert["firstPerformanceDate"]
                     else None,
                     "venue": venue,
-                    "ticketSaleSart": None,
+                    "ticketSaleStart": None,
                     "ticketSaleStop": None,
                     "url": concert["customUrl"] or f"https://ticketmaster.co.il/event/{concert['btxEventId']}/ALL/iw",
                 }
