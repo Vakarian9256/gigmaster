@@ -165,7 +165,7 @@ def get_ticketmaster_concerts() -> list[dict[str, str]]:
 
 
 def get_concerts(eventim_search_term=None) -> list[dict[str, str]]:
-    return get_kupat_concerts() + get_leaan_concerts() + get_eventim_concerts(search_term=eventim_search_term)
+    return get_kupat_concerts() + get_leaan_concerts() + get_eventim_concerts(search_term=eventim_search_term) + get_ticketmaster_concerts()
 
 
 def get_concerts_for_singer(singer: str) -> list[dict[str, str]]:
