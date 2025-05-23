@@ -170,7 +170,7 @@ def get_ticketmaster_concerts() -> list[dict[str, str]]:
         for concert in resp.json()["data"]:
             venue = concert["venueCity"]
             if concert["venueName"]:
-                venue += " " + concert["venuName"].strip()
+                venue += " " + concert["venueName"].strip()
             concerts.append(
                 {
                     "title": concert["eventName"] or concert["eventGroupName"],
