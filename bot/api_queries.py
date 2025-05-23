@@ -1,9 +1,14 @@
-import requests
-from typing import Dict, List
 import datetime
+import logging
+
+import requests
 
 
 requests.urllib3.disable_warnings()
+
+
+logger = logging.getLogger("gigmaster.api")
+
 
 KUPAT_API_URL = "https://tickets.kupat.co.il/api/presentations"
 LEAAN_API_URL = "https://www.leaan.co.il/feed/events?"
@@ -13,13 +18,14 @@ EVENTIM_API_LIVE_SHOWS_URL = "https://public-api.eventim.com/websearch/search/ap
 EVENTIM_API_STANDUP_URL = "https://public-api.eventim.com/websearch/search/api/exploration/v2/productGroups?webId=web__eventim-co-il&language=IW&categories=סטנדאפ%20ובידור%7Cסטנדאפ&categories=null&sort=DateAsc&in_stock=true"
 COMEDYBAR_API_URL = "https://comedybar.smarticket.co.il/iframe/api/shows"
 CASTILIA_API_URL = "https://tickets.castilia.co.il/iframe/api/shows"
+TICKETMASTER_API_URL = "https://www.ticketmaster.co.il/wbtxapi/api/v1/bxcached/event/getAllTopEvent/iw"
 
 
 def format_datetime(date_str: str, from_format: str, to_format: str) -> str:
     return datetime.datetime.strftime(datetime.datetime.strptime(date_str, from_format), to_format)
 
 
-def get_eventim_shows(url, standup: bool = False) -> List[Dict]:
+def get_eventim_shows(url, standup: bool = False) -> list[dict]:
     def filter(show):
         standup_filter = {"name": "סטנדאפ ובידור"}
         if standup:
@@ -51,79 +57,118 @@ def get_eventim_shows(url, standup: bool = False) -> List[Dict]:
     return events
 
 
-def get_kupat_concerts() -> List[Dict]:
-    resp = requests.get(KUPAT_API_URL, verify=False)
-    resp.raise_for_status()
-    presentations = resp.json()["presentations"]
+def get_kupat_concerts() -> list[dict]:
     concerts = []
-    for presentation in presentations:
-        if not presentation["soldout"]:
-            concert = {
-                "title": presentation["featureName"],
-                "date": format_datetime(presentation["dateTime"], "%Y-%m-%d %H:%M", "%H:%M %d/%m/%Y"),
-                "venue": presentation["locationName"],
-                "ticketSaleStart": format_datetime(
-                    presentation["ticketSaleStart"], "%Y-%m-%d %H:%M:%S", "%H:%M:%S %d/%m/%Y"
-                ),
-                "ticketSaleStop": format_datetime(
-                    presentation["ticketSaleStop"], "%Y-%m-%d %H:%M:%S", "%H:%M:%S %d/%m/%Y"
-                ),
-                "url": f"https://tickets.kupat.co.il/booking/features/{presentation['featureId']}?prsntId={presentation['id']}#tickets",
-            }
-            concerts.append(concert)
+    try:
+        resp = requests.get(KUPAT_API_URL, verify=False)
+        resp.raise_for_status()
+    except Exception:
+        logger.exception("Failed to query kupat tlv")
+    else:
+        presentations = resp.json()["presentations"]
+        for presentation in presentations:
+            if not presentation["soldout"]:
+                concert = {
+                    "title": presentation["featureName"],
+                    "date": format_datetime(presentation["dateTime"], "%Y-%m-%d %H:%M", "%H:%M %d/%m/%Y"),
+                    "venue": presentation["locationName"],
+                    "ticketSaleStart": format_datetime(
+                        presentation["ticketSaleStart"], "%Y-%m-%d %H:%M:%S", "%H:%M:%S %d/%m/%Y"
+                    ),
+                    "ticketSaleStop": format_datetime(
+                        presentation["ticketSaleStop"], "%Y-%m-%d %H:%M:%S", "%H:%M:%S %d/%m/%Y"
+                    ),
+                    "url": f"https://tickets.kupat.co.il/booking/features/{presentation['featureId']}?prsntId={presentation['id']}#tickets",
+                }
+                concerts.append(concert)
     return concerts
 
 
-def get_leaan_concerts() -> List[Dict]:
-    resp = requests.get(LEAAN_API_MUSIC_URL, verify=False)
-    resp.raise_for_status()
-    events = resp.json()["feed"]["Events"]["Event"]
+def get_leaan_concerts() -> list[dict]:
     concerts = []
-    for show in events:
-        if "false" in show["SoldOut"]:
-            concert = {
-                "title": show["Show"]["Name"],
-                "date": format_datetime(show["FormattedDate"], "%d/%m/%Y %H:%M", "%H:%M %d/%m/%Y"),
-                "venue": show["HallName"],
-                "ticketSaleStart": show["StartSaleFrom"],
-                "ticketSaleStop": format_datetime(show["EndSaleAt"], "%Y-%m-%dT%H:%M:%S", "%H:%M:%S %d/%m/%Y"),
-                "url": show["DirectLink"],
-            }
-            concerts.append(concert)
+    try:
+        resp = requests.get(LEAAN_API_MUSIC_URL, verify=False)
+        resp.raise_for_status()
+    except Exception:
+        logger.exception("Failed to query concerts from leaan")
+    else:
+        events = resp.json()["feed"]["Events"]["Event"]
+        for show in events:
+            if "false" in show["SoldOut"]:
+                concert = {
+                    "title": show["Show"]["Name"],
+                    "date": format_datetime(show["FormattedDate"], "%d/%m/%Y %H:%M", "%H:%M %d/%m/%Y"),
+                    "venue": show["HallName"],
+                    "ticketSaleStart": show["StartSaleFrom"],
+                    "ticketSaleStop": format_datetime(show["EndSaleAt"], "%Y-%m-%dT%H:%M:%S", "%H:%M:%S %d/%m/%Y"),
+                    "url": show["DirectLink"],
+                }
+                concerts.append(concert)
     return concerts
 
 
-def get_eventim_concerts(search_term=None) -> List[Dict]:
+def get_eventim_concerts(search_term=None) -> list[dict]:
     concerts = []
     url = EVENTIM_API_LIVE_SHOWS_URL
     if search_term:
         url += f"&search_term={search_term.replace(' ', '%20')}"
-    for event in get_eventim_shows(url):
-        for show in event["products"]:
-            venue = show["typeAttributes"]["liveEntertainment"]["location"]["name"]
-            if show["typeAttributes"]["liveEntertainment"]["location"].get("city"):
-                venue += ", " + show["typeAttributes"]["liveEntertainment"]["location"].get("city")
-            concert = {
-                "title": event["name"],
-                "date": format_datetime(
-                    show["typeAttributes"]["liveEntertainment"]["startDate"],
-                    "%Y-%m-%dT%H:%M:%S+%f:00",
-                    "%H:%M:%S %d/%m/%Y",
-                ),
-                "venue": venue,
-                "ticketSaleStart": None,
-                "ticketSaleStop": None,
-                "url": show["link"],
-            }
-            concerts.append(concert)
+    try:
+        available_concerts = get_eventim_shows(url)
+    except Exception:
+        logger.exception("Failed to query concerts from eventim")
+    else:
+        for event in available_concerts:
+            for show in event["products"]:
+                venue = show["typeAttributes"]["liveEntertainment"]["location"]["name"]
+                if show["typeAttributes"]["liveEntertainment"]["location"].get("city"):
+                    venue += ", " + show["typeAttributes"]["liveEntertainment"]["location"].get("city")
+                concert = {
+                    "title": event["name"],
+                    "date": format_datetime(
+                        show["typeAttributes"]["liveEntertainment"]["startDate"],
+                        "%Y-%m-%dT%H:%M:%S+%f:00",
+                        "%H:%M:%S %d/%m/%Y",
+                    ),
+                    "venue": venue,
+                    "ticketSaleStart": None,
+                    "ticketSaleStop": None,
+                    "url": show["link"],
+                }
+                concerts.append(concert)
     return concerts
 
 
-def get_concerts(eventim_search_term=None) -> List[Dict]:
+def get_ticketmaster_concerts() -> list[dict]:
+    concerts = []
+    try:
+        resp = requests.get(TICKETMASTER_API_URL)
+        resp.raise_for_status()
+    except Exception:
+        logger.exception("Failed to query ticketmaster")
+    else:
+        for concert in resp.json()["data"]:
+            concerts.append(
+                {
+                    "title": concert["eventName"],
+                    "date": datetime.datetime.fromtimestamp(concert["firstPerformanceDate"]).strftime(
+                        "%H:%M:%S %d/%m/%Y"
+                    )
+                    if concert["firstPerformanceDate"]
+                    else None,
+                    "venue": concert["venueCity"] + concert["venueName"].strip(),
+                    "ticketSaleSart": None,
+                    "ticketSaleStop": None,
+                    "url": concert["customUrl"]
+                }
+            )
+    return concerts
+
+
+def get_concerts(eventim_search_term=None) -> list[dict]:
     return get_kupat_concerts() + get_leaan_concerts() + get_eventim_concerts(search_term=eventim_search_term)
 
 
-def get_concerts_for_singer(singer: str) -> List[Dict]:
+def get_concerts_for_singer(singer: str) -> list[dict]:
     concerts = {}
     for concert in get_concerts(eventim_search_term=singer):
         if singer.lower() in concert["title"].lower():
@@ -136,86 +181,103 @@ def get_concerts_for_singer(singer: str) -> List[Dict]:
     return list(concerts.values())
 
 
-def get_leaan_standups() -> List[Dict]:
-    resp = requests.get(LEAAN_API_STANDUP_URL, verify=False)
-    resp.raise_for_status()
-    events = resp.json()["feed"]["Events"]["Event"]
+def get_leaan_standups() -> list[dict]:
     standups = []
-    for show in events:
-        if "false" in show["SoldOut"]:
-            standup = {
-                "title": show["Show"]["Name"],
-                "date": format_datetime(show["FormattedDate"], "%d/%m/%Y %H:%M", "%H:%M %d/%m/%Y"),
-                "venue": show["HallName"],
-                "ticketSaleStart": show["StartSaleFrom"],
-                "ticketSaleStop": format_datetime(show["EndSaleAt"], "%Y-%m-%dT%H:%M:%S", "%H:%M:%S %d/%m/%Y"),
-                "url": show["DirectLink"],
-            }
-            standups.append(standup)
+    try:
+        resp = requests.get(LEAAN_API_STANDUP_URL, verify=False)
+        resp.raise_for_status()
+    except Exception:
+        logger.exception("Failed to query leaan")
+    else:
+        events = resp.json()["feed"]["Events"]["Event"]
+        for show in events:
+            if "false" in show["SoldOut"]:
+                standup = {
+                    "title": show["Show"]["Name"],
+                    "date": format_datetime(show["FormattedDate"], "%d/%m/%Y %H:%M", "%H:%M %d/%m/%Y"),
+                    "venue": show["HallName"],
+                    "ticketSaleStart": show["StartSaleFrom"],
+                    "ticketSaleStop": format_datetime(show["EndSaleAt"], "%Y-%m-%dT%H:%M:%S", "%H:%M:%S %d/%m/%Y"),
+                    "url": show["DirectLink"],
+                }
+                standups.append(standup)
     return standups
 
 
-def get_comedybar_standups() -> List[Dict]:
-    resp = requests.get(COMEDYBAR_API_URL, verify=False)
-    resp.raise_for_status()
+def get_comedybar_standups() -> list[dict]:
     standups = []
-    for show in resp.json():
-        for event in show["events"]:
-            standup = {
-                "title": show["title"],
-                "url": "https://comedybar.smarticket.co.il/iframe/event" + event["permalink"],
-                "date": format_datetime(
-                    f"""{event["show_date"]}T{event["show_time"]}""", "%Y-%m-%dT%H:%M", "%H:%M:%S %d/%m/%Y"
-                ),
-                "venue": event["event_place"],
-            }
-            standups.append(standup)
+    try:
+        resp = requests.get(COMEDYBAR_API_URL, verify=False)
+        resp.raise_for_status()
+    except Exception:
+        logger.exception("Failed to query ComedyBar")
+    else:
+        for show in resp.json():
+            for event in show["events"]:
+                standup = {
+                    "title": show["title"],
+                    "url": "https://comedybar.smarticket.co.il/iframe/event" + event["permalink"],
+                    "date": format_datetime(
+                        f"""{event["show_date"]}T{event["show_time"]}""", "%Y-%m-%dT%H:%M", "%H:%M:%S %d/%m/%Y"
+                    ),
+                    "venue": event["event_place"],
+                }
+                standups.append(standup)
     return standups
 
 
-def get_castilia_standups() -> List[Dict]:
-    resp = requests.get(CASTILIA_API_URL, verify=False)
-    resp.raise_for_status()
+def get_castilia_standups() -> list[dict]:
     standups = []
-    for show in resp.json():
-        for event in show["events"]:
-            standup = {
-                "title": show["title"],
-                "url": "https://castilia.co.il/he/Event/Order?eventId=" + str(event["id"]),
-                "date": format_datetime(
-                    f"""{event["show_date"]}T{event["show_time"]}""", "%Y-%m-%dT%H:%M", "%H:%M:%S %d/%m/%Y"
-                ),
-                "venue": event["event_place"],
-            }
-            standups.append(standup)
+    try:
+        resp = requests.get(CASTILIA_API_URL, verify=False)
+        resp.raise_for_status()
+    except Exception:
+        logger.exception("Failed to query Castilia")
+    else:
+        for show in resp.json():
+            for event in show["events"]:
+                standup = {
+                    "title": show["title"],
+                    "url": "https://castilia.co.il/he/Event/Order?eventId=" + str(event["id"]),
+                    "date": format_datetime(
+                        f"""{event["show_date"]}T{event["show_time"]}""", "%Y-%m-%dT%H:%M", "%H:%M:%S %d/%m/%Y"
+                    ),
+                    "venue": event["event_place"],
+                }
+                standups.append(standup)
     return standups
 
 
-def get_eventim_standups(search_term=None) -> List[Dict]:
+def get_eventim_standups(search_term=None) -> list[dict]:
     standups = []
     url = EVENTIM_API_LIVE_SHOWS_URL
     if search_term:
         url += f"&search_term={search_term.replace(' ', '%20')}"
-    for event in get_eventim_shows(url, standup=True):
-        for show in event["products"]:
-            venue = show["typeAttributes"]["liveEntertainment"]["location"]["name"]
-            if show["typeAttributes"]["liveEntertainment"]["location"].get("city"):
-                venue += ", " + show["typeAttributes"]["liveEntertainment"]["location"].get("city")
-            standup = {
-                "title": event["name"],
-                "date": format_datetime(
-                    show["typeAttributes"]["liveEntertainment"]["startDate"],
-                    "%Y-%m-%dT%H:%M:%S+%f:00",
-                    "%H:%M:%S %d/%m/%Y",
-                ),
-                "venue": venue,
-                "url": show["link"],
-            }
-            standups.append(standup)
+    try:
+        events = get_eventim_shows(url, standup=True)
+    except Exception:
+        logger.exception("Failed to query eventim API")
+    else:
+        for event in events:
+            for show in event["products"]:
+                venue = show["typeAttributes"]["liveEntertainment"]["location"]["name"]
+                if show["typeAttributes"]["liveEntertainment"]["location"].get("city"):
+                    venue += ", " + show["typeAttributes"]["liveEntertainment"]["location"].get("city")
+                standup = {
+                    "title": event["name"],
+                    "date": format_datetime(
+                        show["typeAttributes"]["liveEntertainment"]["startDate"],
+                        "%Y-%m-%dT%H:%M:%S+%f:00",
+                        "%H:%M:%S %d/%m/%Y",
+                    ),
+                    "venue": venue,
+                    "url": show["link"],
+                }
+                standups.append(standup)
     return standups
 
 
-def get_standups(eventim_search_term=None) -> List[Dict]:
+def get_standups(eventim_search_term=None) -> list[dict]:
     return (
         get_castilia_standups()
         + get_comedybar_standups()
@@ -224,7 +286,7 @@ def get_standups(eventim_search_term=None) -> List[Dict]:
     )
 
 
-def get_standups_for_comedian(comedian: str) -> List[Dict]:
+def get_standups_for_comedian(comedian: str) -> list[dict]:
     standups = {}
     for standup in get_standups(eventim_search_term=comedian):
         if comedian in standup["title"]:
