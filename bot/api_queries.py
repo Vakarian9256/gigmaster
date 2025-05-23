@@ -168,6 +168,9 @@ def get_ticketmaster_concerts() -> list[dict[str, str]]:
         logger.exception("Failed to query ticketmaster")
     else:
         for concert in resp.json()["data"]:
+            venue = concert["venueCity"]
+            if concert["venueName"]:
+                venue += " " + concert["venuName"].strip()
             concerts.append(
                 {
                     "title": concert["eventName"] or concert["eventGroupName"],
@@ -176,7 +179,7 @@ def get_ticketmaster_concerts() -> list[dict[str, str]]:
                     )
                     if concert["firstPerformanceDate"]
                     else None,
-                    "venue": concert["venueCity"] + concert["venueName"].strip(),
+                    "venue": venue,
                     "ticketSaleSart": None,
                     "ticketSaleStop": None,
                     "url": concert["customUrl"] or f"https://ticketmaster.co.il/event/{concert['btxEventId']}/ALL/iw",
