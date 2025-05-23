@@ -158,7 +158,7 @@ def get_ticketmaster_concerts() -> list[dict[str, str]]:
                     "venue": concert["venueCity"] + concert["venueName"].strip(),
                     "ticketSaleSart": None,
                     "ticketSaleStop": None,
-                    "url": concert["customUrl"]
+                    "url": concert["customUrl"] or f"https://ticketmaster.co.il/event/{concert['btxEventId']}/ALL/iw"
                 }
             )
     return concerts
