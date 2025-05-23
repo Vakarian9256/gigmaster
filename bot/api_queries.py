@@ -149,7 +149,7 @@ def get_ticketmaster_concerts() -> list[dict[str, str]]:
         for concert in resp.json()["data"]:
             concerts.append(
                 {
-                    "title": concert["eventName"],
+                    "title": concert["eventName"] or concert["eventGroupName"],
                     "date": datetime.datetime.fromtimestamp(concert["firstPerformanceDate"]).strftime(
                         "%H:%M:%S %d/%m/%Y"
                     )
