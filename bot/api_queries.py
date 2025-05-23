@@ -25,7 +25,7 @@ def format_datetime(date_str: str, from_format: str, to_format: str) -> str:
     return datetime.datetime.strftime(datetime.datetime.strptime(date_str, from_format), to_format)
 
 
-def get_eventim_shows(url, standup: bool = False) -> list[dict]:
+def get_eventim_shows(url, standup: bool = False) -> list[dict[str, str]]:
     def filter(show):
         standup_filter = {"name": "סטנדאפ ובידור"}
         if standup:
@@ -57,7 +57,7 @@ def get_eventim_shows(url, standup: bool = False) -> list[dict]:
     return events
 
 
-def get_kupat_concerts() -> list[dict]:
+def get_kupat_concerts() -> list[dict[str, str]]:
     concerts = []
     try:
         resp = requests.get(KUPAT_API_URL, verify=False)
@@ -84,7 +84,7 @@ def get_kupat_concerts() -> list[dict]:
     return concerts
 
 
-def get_leaan_concerts() -> list[dict]:
+def get_leaan_concerts() -> list[dict[str, str]]:
     concerts = []
     try:
         resp = requests.get(LEAAN_API_MUSIC_URL, verify=False)
@@ -107,7 +107,7 @@ def get_leaan_concerts() -> list[dict]:
     return concerts
 
 
-def get_eventim_concerts(search_term=None) -> list[dict]:
+def get_eventim_concerts(search_term=None) -> list[dict[str, str]]:
     concerts = []
     url = EVENTIM_API_LIVE_SHOWS_URL
     if search_term:
@@ -138,7 +138,7 @@ def get_eventim_concerts(search_term=None) -> list[dict]:
     return concerts
 
 
-def get_ticketmaster_concerts() -> list[dict]:
+def get_ticketmaster_concerts() -> list[dict[str, str]]:
     concerts = []
     try:
         resp = requests.get(TICKETMASTER_API_URL)
@@ -164,11 +164,11 @@ def get_ticketmaster_concerts() -> list[dict]:
     return concerts
 
 
-def get_concerts(eventim_search_term=None) -> list[dict]:
+def get_concerts(eventim_search_term=None) -> list[dict[str, str]]:
     return get_kupat_concerts() + get_leaan_concerts() + get_eventim_concerts(search_term=eventim_search_term)
 
 
-def get_concerts_for_singer(singer: str) -> list[dict]:
+def get_concerts_for_singer(singer: str) -> list[dict[str, str]]:
     concerts = {}
     for concert in get_concerts(eventim_search_term=singer):
         if singer.lower() in concert["title"].lower():
@@ -181,7 +181,7 @@ def get_concerts_for_singer(singer: str) -> list[dict]:
     return list(concerts.values())
 
 
-def get_leaan_standups() -> list[dict]:
+def get_leaan_standups() -> list[dict[str, str]]:
     standups = []
     try:
         resp = requests.get(LEAAN_API_STANDUP_URL, verify=False)
@@ -204,7 +204,7 @@ def get_leaan_standups() -> list[dict]:
     return standups
 
 
-def get_comedybar_standups() -> list[dict]:
+def get_comedybar_standups() -> list[dict[str, str]]:
     standups = []
     try:
         resp = requests.get(COMEDYBAR_API_URL, verify=False)
@@ -226,7 +226,7 @@ def get_comedybar_standups() -> list[dict]:
     return standups
 
 
-def get_castilia_standups() -> list[dict]:
+def get_castilia_standups() -> list[dict[str, str]]:
     standups = []
     try:
         resp = requests.get(CASTILIA_API_URL, verify=False)
@@ -248,7 +248,7 @@ def get_castilia_standups() -> list[dict]:
     return standups
 
 
-def get_eventim_standups(search_term=None) -> list[dict]:
+def get_eventim_standups(search_term=None) -> list[dict[str, str]]:
     standups = []
     url = EVENTIM_API_LIVE_SHOWS_URL
     if search_term:
@@ -277,7 +277,7 @@ def get_eventim_standups(search_term=None) -> list[dict]:
     return standups
 
 
-def get_standups(eventim_search_term=None) -> list[dict]:
+def get_standups(eventim_search_term=None) -> list[dict[str, str]]:
     return (
         get_castilia_standups()
         + get_comedybar_standups()
@@ -286,7 +286,7 @@ def get_standups(eventim_search_term=None) -> list[dict]:
     )
 
 
-def get_standups_for_comedian(comedian: str) -> list[dict]:
+def get_standups_for_comedian(comedian: str) -> list[dict[str, str]]:
     standups = {}
     for standup in get_standups(eventim_search_term=comedian):
         if comedian in standup["title"]:
