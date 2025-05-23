@@ -162,7 +162,7 @@ def get_ticketmaster_concerts() -> list[dict[str, str]]:
 
     concerts = []
     try:
-        resp = get_legacy_session.get(TICKETMASTER_API_URL)
+        resp = get_legacy_session().get(TICKETMASTER_API_URL)
         resp.raise_for_status()
     except Exception:
         logger.exception("Failed to query ticketmaster")
@@ -171,7 +171,7 @@ def get_ticketmaster_concerts() -> list[dict[str, str]]:
             concerts.append(
                 {
                     "title": concert["eventName"] or concert["eventGroupName"],
-                    "date": datetime.datetime.fromtimestamp(concert["firstPerformanceDate"]).strftime(
+                    "date": datetime.datetime.fromtimestamp(concert["firstPerformanceDate"] / 1000).strftime(
                         "%H:%M:%S %d/%m/%Y"
                     )
                     if concert["firstPerformanceDate"]
