@@ -1,5 +1,7 @@
 import datetime
 import logging
+import ssl
+import urllib3
 
 import requests
 
@@ -139,33 +141,60 @@ def get_eventim_concerts(search_term=None) -> list[dict[str, str]]:
 
 
 def get_ticketmaster_concerts() -> list[dict[str, str]]:
+    class CustomHttpAdapter(requests.adapters.HTTPAdapter):
+        # "Transport adapter" that allows us to use custom ssl_context.
+
+        def __init__(self, ssl_context=None, **kwargs):
+            self.ssl_context = ssl_context
+            super().__init__(**kwargs)
+
+        def init_poolmanager(self, connections, maxsize, block=False):
+            self.poolmanager = urllib3.poolmanager.PoolManager(
+                num_pools=connections, maxsize=maxsize, block=block, ssl_context=self.ssl_context
+            )
+
+    def get_legacy_session():
+        ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        ctx.options |= 0x4  # OP_LEGACY_SERVER_CONNECT
+        session = requests.session()
+        session.mount("https://", CustomHttpAdapter(ctx))
+        return session
+
     concerts = []
     try:
-        resp = requests.get(TICKETMASTER_API_URL)
+        resp = get_legacy_session().get(TICKETMASTER_API_URL)
         resp.raise_for_status()
     except Exception:
         logger.exception("Failed to query ticketmaster")
     else:
         for concert in resp.json()["data"]:
+            venue = concert["venueCity"]
+            if concert["venueName"]:
+                venue += " " + concert["venueName"].strip()
             concerts.append(
                 {
-                    "title": concert["eventName"],
-                    "date": datetime.datetime.fromtimestamp(concert["firstPerformanceDate"]).strftime(
+                    "title": concert["eventName"] or concert["eventGroupName"],
+                    "date": datetime.datetime.fromtimestamp(concert["firstPerformanceDate"] / 1000).strftime(
                         "%H:%M:%S %d/%m/%Y"
                     )
                     if concert["firstPerformanceDate"]
                     else None,
-                    "venue": concert["venueCity"] + concert["venueName"].strip(),
-                    "ticketSaleSart": None,
+                    "venue": venue,
+                    "ticketSaleStart": None,
                     "ticketSaleStop": None,
-                    "url": concert["customUrl"]
+                    "url": concert["customUrl"] or f"https://ticketmaster.co.il/event/{concert['btxEventId']}/ALL/iw",
                 }
             )
     return concerts
 
 
 def get_concerts(eventim_search_term=None) -> list[dict[str, str]]:
-    return get_kupat_concerts() + get_leaan_concerts() + get_eventim_concerts(search_term=eventim_search_term)
+    return (
+        get_kupat_concerts()
+        + get_leaan_concerts()
+        + get_eventim_concerts(search_term=eventim_search_term)
+        + get_ticketmaster_concerts()
+    )
 
 
 def get_concerts_for_singer(singer: str) -> list[dict[str, str]]:
